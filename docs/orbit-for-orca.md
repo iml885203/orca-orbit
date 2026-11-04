@@ -1,7 +1,5 @@
 # Orbit for Orca
 
-> **DRAFT.** Written for the Orbit maintainer to review. Nothing here is published yet.
-
 ## What it is
 
 Orbit for Orca is a plugin that adds a read-only Orbit status panel to Orca's right sidebar. It
@@ -12,8 +10,9 @@ Orbit state; it never changes it.
 ## Requirements
 
 - Orca 1.4.247 or newer.
-- Orbit 0.16.9 or newer. Older Orbit works, but named instances show `daemon up` without
-  resource counts or last-used time, and log tabs start without recent lines.
+- Orbit 0.16.10 or newer. Older Orbit works, but SQL status shows `unknown`, named instances
+  show `daemon up` without resource counts or last-used time, and log tabs start without recent
+  lines.
 - The `orbit` CLI on your `PATH`. On macOS and Linux the plugin also looks in the usual install
   locations (Homebrew and `/usr/local/bin`; on Linux also `~/.local/bin`), because Orca started
   from the desktop may not load your shell profile.
@@ -96,18 +95,14 @@ one of four states:
 | `in sync`       | `orbit sqlserver diff <db>` found nothing to change.                         |
 | `changed`       | The diff reports source files changed since the last publish, or schema changes. |
 | `not published` | Orbit has no publish record for the database.                                |
-| `unknown`       | The daemon is stopped or unreachable, or the diff failed. The detail says why. |
+| `unknown`       | Orbit is older than 0.16.10, or the diff failed. The detail says why.        |
 
 Orbit's [SQL workflow](https://github.com/iml885203/orbit/blob/main/docs/sql-workflow.md) runs a full SqlPackage comparison for a database it never
-published, which takes seconds per database. To avoid that, the plugin first asks the runtime's
-daemon which databases have a publish record, and runs the quick `diff` only for those. Databases
+published, which takes seconds per database. To avoid that, the plugin reads the publish records
+that `orbit sqlserver list --json` reports, and runs the quick `diff` only for databases Orbit has
+published. Databases
 without a record are reported as `not published` without touching SQL Server. Up to four diffs
 run at a time.
-
-> **Maintainer decision:** This relies on `GET /api/db-state`, an endpoint of the daemon that the
-> dashboard uses and that is not part of Orbit's CLI contract. Should Orbit offer an official CLI
-> command for the publish record (for example a `--json` listing under `orbit sqlserver`), so the
-> plugin can drop the endpoint? Until then, the plugin could break if the endpoint changes.
 
 ## Platform support
 
@@ -119,8 +114,9 @@ run at a time.
 
 ## Known limitations
 
-- **SQL status uses an endpoint outside the CLI contract.** It reads the daemon's
-  `GET /api/db-state`. If that endpoint stops answering, every database shows `unknown`.
+- **A publish record is Orbit's own history, not a live check.** A database changed or dropped
+  outside Orbit, or a recreated volume, still shows its last recorded publish; the quick `diff`
+  then reports what it finds.
 - **The default runtime costs one extra call.** Named instances get their `N/M up` count and
   last-used time from `orbit instance list --json`; the default runtime is not in that list, so
   the plugin asks it with `orbit status`. It has no last-used time.
@@ -139,10 +135,8 @@ run at a time.
 **A runtime shows `daemon off`.** Orbit reports resources only while the daemon runs. Start the
 runtime with the CLI or the dashboard; the panel picks it up within 30 seconds.
 
-**Every database shows `unknown`.** Either the daemon is stopped (`Daemon stopped`) or it did not
-answer the publish-record request (`Daemon unreachable`). Check `orbit status` for that runtime.
-If the daemon is healthy, the endpoint may have changed; see
-[Known limitations](#known-limitations).
+**Every database shows `unknown`.** The detail says why. `Needs Orbit 0.16.10 or later` means
+the `orbit` on Orca's `PATH` is too old to report publish records; check `orbit --version`.
 
 **The log tab does not open.** Open a workspace in Orca first. The tab is created inside the
 focused workspace.

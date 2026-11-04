@@ -135,15 +135,20 @@ export function parseResources(stdout: string): Resource[] {
   }))
 }
 
-export function parseSqlProjects(stdout: string): { project: string; db: string }[] {
-  const data = envelope<{ projects: { name: string; databases: string[] }[] }>(stdout)
-  return data.projects.flatMap((p) => p.databases.map((db) => ({ project: p.name, db })))
+type PublishRecordJson = { database: string; last_publish: unknown }
+
+export type SqlProjects = {
+  databases: { project: string; db: string }[]
+  /** Databases Orbit has published, from `publish_records`; null when the Orbit CLI is too old to report them. */
+  published: Set<string> | null
 }
 
-/** The daemon's publish record (`GET /api/db-state`): which databases Orbit has published. */
-export function publishedDatabases(body: string): Set<string> {
-  const state = JSON.parse(body) as { dbs?: Record<string, { lastPublish?: unknown }> }
-  return new Set(Object.entries(state.dbs ?? {}).filter(([, db]) => db.lastPublish).map(([name]) => name))
+export function parseSqlProjects(stdout: string): SqlProjects {
+  const data = envelope<{ projects: { name: string; databases: string[] }[]; publish_records?: PublishRecordJson[] }>(stdout)
+  return {
+    databases: data.projects.flatMap((p) => p.databases.map((db) => ({ project: p.name, db }))),
+    published: data.publish_records ? new Set(data.publish_records.filter((r) => r.last_publish != null).map((r) => r.database)) : null
+  }
 }
 
 type DiffJson = {

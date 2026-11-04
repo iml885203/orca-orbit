@@ -1,5 +1,5 @@
 import { assert, test } from 'orca/testing'
-import { envelope, isReadOnly, logsCommand, parseResources, publishedDatabases, sqlFromDiff } from './orbit'
+import { envelope, isReadOnly, logsCommand, parseResources, parseSqlProjects, sqlFromDiff } from './orbit'
 
 const ok = (data: unknown) => JSON.stringify({ schema_version: 'orbit.cli.v1', ok: true, data })
 
@@ -25,8 +25,14 @@ test('resources keep state, restarts and what they wait on', () => {
 })
 
 test('only databases with a recorded publish count as published', () => {
-  const body = JSON.stringify({ dbs: { OrdersDB: { lastPublish: { at: '2026-11-04T10:08:19Z' } }, Other: { baselineAt: {} } } })
-  assert.deepEqual([...publishedDatabases(body)], ['OrdersDB'])
+  const stdout = ok({
+    projects: [{ name: 'OrdersDB', databases: ['OrdersDB', 'Other'] }],
+    publish_records: [
+      { database: 'OrdersDB', project: 'OrdersDB', last_publish: { at: '2026-11-04T10:08:19Z', source: 'cli' }, last_reset: null, baseline_at: null },
+      { database: 'Other', project: 'OrdersDB', last_publish: null, last_reset: null, baseline_at: { at: '2026-11-04T10:08:19Z', source: 'cli' } }
+    ]
+  })
+  assert.deepEqual([...(parseSqlProjects(stdout).published ?? [])], ['OrdersDB'])
 })
 
 test('a diff names file changes when the quick check has only those', () => {

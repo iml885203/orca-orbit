@@ -24,7 +24,6 @@ function fakeOrbit(calls: string[][], overrides: Record<string, string> = {}): D
 
 function mountWith(deps: Partial<Deps> & Pick<Deps, 'orbit'>, host = mockHost()) {
   const full: Deps = {
-    daemonGet: async () => '{"dbs":{}}',
     showTerminal: async () => ({ terminalId: 't1' }),
     ...deps
   }
@@ -54,19 +53,29 @@ test('a stopped instance reports no resources without asking its daemon', async 
 test('SQL diffs only published databases and reads the rest from the publish record', async () => {
   const calls: string[][] = []
   const orbit = fakeOrbit(calls, {
-    'sqlserver list': ok({ projects: [{ name: 'OrdersDB', databases: ['OrdersDB', 'OrdersDB_test'] }] }),
+    'sqlserver list': ok({
+      projects: [{ name: 'OrdersDB', databases: ['OrdersDB', 'OrdersDB_test'] }],
+      publish_records: [
+        { database: 'OrdersDB', project: 'OrdersDB', last_publish: { at: 'x', source: 'cli' }, last_reset: null, baseline_at: null },
+        { database: 'OrdersDB_test', project: 'OrdersDB', last_publish: null, last_reset: null, baseline_at: { at: 'x', source: 'cli' } }
+      ]
+    }),
     'sqlserver diff OrdersDB --json': ok({ in_sync: true, created: 0, altered: 0, dropped: 0, quick: true })
   })
-  const worker = await mountWith({
-    orbit,
-    daemonGet: async (socket, path) => {
-      assert.deepEqual([socket, path], ['/s/dev1.sock', '/api/db-state'])
-      return JSON.stringify({ dbs: { OrdersDB: { lastPublish: { at: 'x' } } } })
-    }
-  })
+  const worker = await mountWith({ orbit })
   const { databases } = await worker.request('orbit.sql', { name: 'dev1' })
   assert.deepEqual(databases?.map((d) => [d.db, d.status]), [['OrdersDB', 'in-sync'], ['OrdersDB_test', 'not-published']])
   assert.deepEqual(calls.filter((c) => c.includes('diff')), [['--instance', 'dev1', '-c', '/envs/shop.yaml', 'sqlserver', 'diff', 'OrdersDB', '--json']])
+  await worker.deactivate()
+})
+
+test('an Orbit CLI without publish records reports SQL status as unknown without diffing', async () => {
+  const calls: string[][] = []
+  const orbit = fakeOrbit(calls, { 'sqlserver list': ok({ projects: [{ name: 'OrdersDB', databases: ['OrdersDB'] }] }) })
+  const worker = await mountWith({ orbit })
+  const { databases } = await worker.request('orbit.sql', { name: 'dev1' })
+  assert.deepEqual(databases?.map((d) => [d.db, d.status, d.detail]), [['OrdersDB', 'unknown', 'Needs Orbit 0.16.10 or later']])
+  assert.equal(calls.some((c) => c.includes('diff')), false)
   await worker.deactivate()
 })
 

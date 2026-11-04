@@ -1,6 +1,5 @@
 import type { OrcaWorkerApi } from 'orca/worker'
 import { execFile } from 'node:child_process'
-import { request } from 'node:http'
 import { homedir } from 'node:os'
 import { delimiter, join } from 'node:path'
 import {
@@ -12,17 +11,15 @@ import {
   parseInstances,
   parseResources,
   parseSqlProjects,
-  publishedDatabases,
   sqlFromDiff,
   targetArgs,
-  type Orbit
+  type Orbit,
+  type SqlProjects
 } from './orbit'
 import type { Instance, SqlDb } from './protocol'
 
 export type Deps = {
   orbit: Orbit
-  /** GET `path` from an Orbit daemon over its unix socket; answers the body. */
-  daemonGet: (socketPath: string, path: string) => Promise<string>
   /** Opens a visible terminal tab in the workspace at `path` and switches to it. */
   showTerminal: (tab: { path: string; title: string; command: string }) => Promise<{ terminalId: string }>
 }
@@ -63,18 +60,6 @@ function run(file: string, args: readonly string[]): Promise<string> {
 const nodeDeps: Deps = {
   orbit: (args) =>
     isReadOnly(args) ? run('orbit', args) : Promise.reject(new Error(`refused: orbit ${args.join(' ')}`)),
-  daemonGet: (socketPath, path) =>
-    new Promise((resolve, reject) => {
-      const req = request({ socketPath, path, timeout: 5000 }, (res) => {
-        let body = ''
-        res.setEncoding('utf8')
-        res.on('data', (chunk: string) => (body += chunk))
-        res.on('end', () => resolve(body))
-      })
-      req.on('timeout', () => req.destroy(new Error('daemon did not answer')))
-      req.on('error', reject)
-      req.end()
-    }),
   showTerminal: async ({ path, title, command }) => {
     const out = JSON.parse(
       await run(orcaCliPath(process.platform, (process as { resourcesPath?: string }).resourcesPath), ['terminal', 'create', '--worktree', `path:${path}`, '--title', title, '--command', command, '--focus', '--json'])
@@ -143,23 +128,18 @@ export function registerHandlers(orca: OrcaWorkerApi, deps: Deps): void {
   orca.panels.handle('orbit.sql', async ({ name }) => {
     const instance = await find(name)
     const target = targetArgs(instance)
-    let projects: { project: string; db: string }[]
+    let sql: SqlProjects
     try {
-      projects = parseSqlProjects(await deps.orbit([...target, 'sqlserver', 'list', '--json']))
+      sql = parseSqlProjects(await deps.orbit([...target, 'sqlserver', 'list', '--json']))
     } catch (error) {
       if (error instanceof OrbitError && error.code === 'not_configured') return { databases: null }
       throw error
     }
-    let published: Set<string> | null = null
-    try {
-      published = publishedDatabases(await deps.daemonGet(instance.socketPath, '/api/db-state'))
-    } catch {
-      published = null
-    }
+    const { published } = sql
     // A database Orbit never published would make `diff` build and run the full engine (seconds
     // each); the publish record answers it without touching SQL Server.
-    const databases = await mapLimit(projects, SQL_DIFF_CONCURRENCY, async (p): Promise<SqlDb> => {
-      if (!instance.daemon || !published) return { ...p, status: 'unknown', detail: instance.daemon ? 'Daemon unreachable' : 'Daemon stopped' }
+    const databases = await mapLimit(sql.databases, SQL_DIFF_CONCURRENCY, async (p): Promise<SqlDb> => {
+      if (!published) return { ...p, status: 'unknown', detail: 'Needs Orbit 0.16.10 or later' }
       if (!published.has(p.db)) return { ...p, status: 'not-published', detail: 'Not published' }
       try {
         return sqlFromDiff(p, await deps.orbit([...target, 'sqlserver', 'diff', p.db, '--json']))

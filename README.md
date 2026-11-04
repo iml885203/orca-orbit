@@ -22,19 +22,17 @@ The worker runs only `orbit instance list`, `status`, `inspect`, `sqlserver list
 ## How SQL status is read
 
 `orbit sqlserver diff` on a database Orbit never published runs the full SqlPackage comparison
-(seconds per database). The worker first reads the daemon's publish record
-(`GET /api/db-state` on the instance socket) and runs the quick diff only for published
-databases, so a 22-database environment answers in about 0.2 seconds.
-
-`/api/db-state` is the dashboard's daemon endpoint, not part of Orbit's CLI contract; if it
-stops answering, every database shows `unknown` with the reason.
+(seconds per database). The worker reads `data.publish_records` from the
+`orbit sqlserver list --json` call it already makes, and runs the quick diff only for databases
+whose `last_publish` is set, so a 22-database environment answers in about 0.2 seconds. An Orbit
+CLI too old to report publish records shows every database as `unknown`.
 
 ## Orbit version
 
-Orbit 0.16.9 or newer: named instances' resource counts and last-used time come from
-`orbit instance list --json`, and the log tab's `orbit logs <r> -f --lines 200` shows recent
-lines before following. With older Orbit, named instances show `daemon up` without counts and
-log tabs start empty.
+Orbit 0.16.10 or newer. It reports publish records in `orbit sqlserver list --json`, named
+instances' resource counts and last-used time in `orbit instance list --json`, and recent log
+lines before `orbit logs <r> -f --lines 200` follows. With older Orbit, SQL status shows
+`unknown`, named instances show `daemon up` without counts, and log tabs start empty.
 
 ## Develop
 
