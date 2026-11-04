@@ -48,5 +48,16 @@ Needs Orca 1.4.247 or newer and `orbit` on PATH. Logs open through Orca's bundle
 beside the running app (`bin/orca` on macOS, `bin/orca-ide` on Linux), because the plugin
 API's `terminal.create` opens a background terminal that never appears on screen.
 
+## Release
+
+```sh
+scripts/release.sh 0.1.2
+```
+
+It checks that `main` is clean and pushed, that the tag is new, and that the plugin has a licence;
+runs the tests; bumps `version` in `orca-plugin.json`; validates; then commits, tags `v0.1.2` and,
+after you confirm, pushes the commit and the tag together. The community catalog lists the tag
+on its next scan and never accepts a moved tag, so a pushed version is final.
+
 Platforms: macOS verified; Linux coded for but untested; Windows not supported yet (commands
 are POSIX-quoted and joined with `;`).
