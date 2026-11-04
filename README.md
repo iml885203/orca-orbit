@@ -2,6 +2,8 @@
 
 A read-only Orbit status panel in Orca's right sidebar.
 
+![The Orbit panel in Orca, showing two running instances, the selected instance's resources and its SQL databases](docs/assets/orbit-panel.png)
+
 - **Instances**: the default runtime and every named `--instance`. Each has its own daemon;
   State shows `daemon off` or how many resources are up (`2/12 up`). A runtime counts as
   running when at least one resource is up — a daemon alone runs nothing, and the default

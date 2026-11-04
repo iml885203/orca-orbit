@@ -30,9 +30,11 @@ do not need to install it separately.
 
 ### From the marketplace
 
-Orca's public marketplace lists GitHub repositories that have a `v<version>` tag and the
-`orca-plugin` topic. Once the plugin is published, find it at
-`https://www.onorca.dev/plugins/iml885203/orca-orbit` and install it from there.
+Orca's community marketplace lists GitHub repositories that have a `v<version>` tag, the
+`orca-plugin` topic and a licence. The plugin's page is
+`https://www.onorca.dev/plugins/iml885203/orca-orbit`. To browse the marketplace inside Orca, add
+it under Settings, then Plugins, then Add marketplace, with URL
+`https://github.com/stablyai/orca-community-plugins.git` and ref `main`.
 
 The plugin asks for one capability, `workspace:read`, which it uses to find the workspace that
 the log tab opens in.
@@ -40,6 +42,8 @@ the log tab opens in.
 ## What you see
 
 Open the Orbit panel in the right sidebar.
+
+![The Orbit panel in Orca](assets/orbit-panel.png)
 
 **Instance list.** One row per runtime: the default runtime (labelled "default runtime") and
 every named `--instance`. Columns are Instance, Environment and State. State is `daemon off`, or

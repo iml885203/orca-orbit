@@ -2,8 +2,9 @@
   "manifestVersion": 2,
   "id": "orbit-status",
   "name": "Orbit",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Read-only Orbit status: running instances, each instance's containers and services, SQL project sync, and logs in a terminal tab.",
+  "license": "MIT",
   "engines": {
     "orca": ">=1.4.247"
   },
@@ -22,6 +23,8 @@
     ]
   },
   "capabilities": [
-    { "kind": "workspace:read" }
+    {
+      "kind": "workspace:read"
+    }
   ]
 }
