@@ -2,14 +2,6 @@
 
 > **DRAFT.** Written for the Orbit maintainer to review. Nothing here is published yet.
 
-> **Maintainer decision:** Where does this document, and the plugin, live? Options: a separate
-> repository (needs the `orca-plugin` topic and a `v<version>` tag to appear in Orca's public
-> marketplace, and gives a clean Git URL), or a subdirectory of the Orbit repository (docs stay
-> next to the CLI). A catalog entry can point at a subdirectory (`source.path`, printed by
-> `orca plugin release-entry`); whether a plain Git URL install accepts a subdirectory is not
-> verified yet. Replace `<repo-url>` below once decided. If it moves into Orbit's docs, add a
-> zh-TW translation.
-
 ## What it is
 
 Orbit for Orca is a plugin that adds a read-only Orbit status panel to Orca's right sidebar. It
@@ -35,13 +27,13 @@ do not need to install it separately.
 
 1. In Orca, open Settings, then Plugins, then Add.
 2. Choose "From a Git URL…".
-3. Enter `<repo-url>` and confirm the plugin's permissions.
+3. Enter `https://github.com/iml885203/orca-orbit` and confirm the plugin's permissions.
 
 ### From the marketplace
 
 Orca's public marketplace lists GitHub repositories that have a `v<version>` tag and the
 `orca-plugin` topic. Once the plugin is published, find it at
-`https://www.onorca.dev/plugins/<owner>/<repo>` and install it from there.
+`https://www.onorca.dev/plugins/iml885203/orca-orbit` and install it from there.
 
 The plugin asks for one capability, `workspace:read`, which it uses to find the workspace that
 the log tab opens in.
@@ -59,7 +51,7 @@ refreshes every 30 seconds while it is visible; the refresh button reloads on de
 
 **Runtime details.** Select a runtime to see:
 
-- **Dashboard.** A button that opens the runtime's [Orbit dashboard](../README.md) in your browser.
+- **Dashboard.** A button that opens the runtime's [Orbit dashboard](https://github.com/iml885203/orbit#dashboard) in your browser.
   It is disabled while the daemon is off.
 - **Resources.** Each container and service with its kind, state and restart count. A stopped
   resource shows the dependencies it is waiting on, for example `stopped (needs db)`. Orbit
@@ -106,7 +98,7 @@ one of four states:
 | `not published` | Orbit has no publish record for the database.                                |
 | `unknown`       | The daemon is stopped or unreachable, or the diff failed. The detail says why. |
 
-Orbit's [SQL workflow](sql-workflow.md) runs a full SqlPackage comparison for a database it never
+Orbit's [SQL workflow](https://github.com/iml885203/orbit/blob/main/docs/sql-workflow.md) runs a full SqlPackage comparison for a database it never
 published, which takes seconds per database. To avoid that, the plugin first asks the runtime's
 daemon which databases have a publish record, and runs the quick `diff` only for those. Databases
 without a record are reported as `not published` without touching SQL Server. Up to four diffs
